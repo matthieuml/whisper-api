@@ -4,7 +4,7 @@ from celery import Celery, Task
 from celery.result import AsyncResult
 from flask import Flask, request
 
-from utils import add_together
+from api.utils import add_together
 
 # =============== Initialize Flask and Celery ===============
 
