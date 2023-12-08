@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "aie-whisper-api"
+version = "0.0"
+description = ""
+authors = ["Matthieu Mérigot-Lombard", "Zakaria Hammal"]
+
+[tool.poetry.dependencies]
+python = "3.11.6"
+flask = "^2.0.2"
+gunicorn = "21.2.0"
+openai-whisper = { git = "https://github.com/openai/whisper.git" }
+celery = "^5.2.7"
+redis = "^5.0.1"
+
+[tool.poetry.dev-dependencies]

@@ -1,0 +1,30 @@
+repos:
+  - repo: https://github.com/ambv/black
+    rev: 22.3.0
+    hooks:
+      - id: black
+        additional_dependencies: ['click<8.1.0']
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ['--profile', 'black']
+  - repo: https://github.com/PyCQA/flake8
+    rev: 4.0.1
+    hooks:
+      - id: flake8
+        args:
+          - '--ignore=E501,W503,E203,F401'
+  - repo: https://github.com/IamTheFij/docker-pre-commit
+    rev: v2.0.1
+    hooks:
+      - id: docker-compose-check
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.8.0
+    hooks:
+      - id: hadolint-docker
+        name: Lint Dockerfiles
+        description: Runs hadolint Docker image to lint Dockerfiles
+        language: docker_image
+        types: ['dockerfile']
+        entry: hadolint/hadolint:v2.8.0 hadolint

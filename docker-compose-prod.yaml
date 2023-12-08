@@ -1,0 +1,48 @@
+version: "3.7"
+
+services:
+  redis:
+    image: redis:7.2.2-bookworm
+    command: redis-server --save 60 1 --loglevel notice--requirepass ${REDIS_PASSWORD}
+    restart: always
+    volumes:
+      - cache:/data
+    networks:
+      - cache_link
+    healthcheck:
+        test: echo 'auth ${REDIS_PASSWORD}\nping' | redis-cli | grep PONG
+        interval: 5s
+        timeout: 3s
+        retries: 5
+
+  back:
+    build:
+      context: src
+      dockerfile: Dockerfile
+      target: production
+    command: gunicorn app:app --bind 0.0.0.0:8000
+    environment:
+      REDIS_HOST: ${REDIS_HOST-redis}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      GUNICORN_NB_WORKERS: ${GUNICORN_NB_WORKERS}
+    ports:
+      - 8000:8000
+    networks:
+      - cache_link
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  cache:  # Redis data
+
+networks:
+  cache_link: # Redis network
+    driver: bridge
