@@ -20,7 +20,7 @@ services:
       context: src
       dockerfile: Dockerfile
       target: production
-    command: gunicorn api.app:app --bind 0.0.0.0:8000
+    command: gunicorn api.app:app --bind 0.0.0.0:8000 --log-level info --access-logfile /var/log/gunicorn.log
     environment:
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
