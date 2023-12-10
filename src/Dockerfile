@@ -46,15 +46,6 @@ RUN apt-get update \
 # `development` image is used during development / testing
 FROM runtime-base as development
 
-# Copy the entrypoint where it won't be mapped by the volume
-COPY ./entrypoint.sh /usr/local/bin/
-
-# Remove Windows carriage return from entrypoint
-RUN sed -i 's/\r$//g' /usr/local/bin/entrypoint.sh \
-    && chmod +x /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
 # ======================== PROD ENVIRONMENT ========================
 # `production` image is used in production
 FROM runtime-base as production
@@ -74,16 +65,8 @@ COPY . .
 
 # Give the right permission to the user
 RUN chown -R fablab:fablab /src \
-    && touch /var/log/celery.log \
-    && chown fablab:fablab /var/log/celery.log \
-    && touch /var/log/gunicorn.log \
-    && chown fablab:fablab /var/log/gunicorn.log \
-    # Remove Windows carriage return from entrypoint
-    && sed -i 's/\r$//g' /src/entrypoint.sh \
-    && chmod +x /src/entrypoint.sh \
-    # Remove files not needed in production
+    && touch /var/log/celery.log /var/log/gunicorn.log \
+    && chown fablab:fablab /var/log/celery.log /var/log/gunicorn.log \
     && rm pyproject.toml poetry.lock Dockerfile
 
 USER fablab
-
-ENTRYPOINT ["/src/entrypoint.sh"]
