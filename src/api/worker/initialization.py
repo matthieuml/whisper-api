@@ -1,6 +1,7 @@
 from celery import Celery, Task
 from flask import Flask
 
+
 def celery_init_app(app: Flask) -> Celery:
     """
     Initialize Celery with Flask context.
@@ -8,6 +9,7 @@ def celery_init_app(app: Flask) -> Celery:
     :param app: Flask application instance
     :return celery_app: Celery application instance
     """
+
     class FlaskTask(Task):
         def __call__(self, *args: object, **kwargs: object) -> object:
             with app.app_context():

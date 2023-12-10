@@ -3,8 +3,8 @@ import os
 from celery.result import AsyncResult
 from flask import Flask
 
-from api.worker.tasks import add_together
 from api.worker.initialization import celery_init_app
+from api.worker.tasks import add_together
 
 # =============== Initialize Flask and Celery ===============
 
