@@ -40,7 +40,7 @@ services:
       context: ../src
       dockerfile: Dockerfile
       target: development
-    command: celery -A api.app.celery_app worker --loglevel=debug --concurrency=1
+    command: celery -A api.app.celery_app worker --loglevel=debug --concurrency=${WORKER_CONCURRENCY-1}
     environment:
       SECRET_KEY: ${SECRET_KEY}
       REDIS_HOST: ${REDIS_HOST-redis}
