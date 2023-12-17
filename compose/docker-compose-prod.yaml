@@ -22,6 +22,7 @@ services:
       target: production
     command: gunicorn api.app:app --bind 0.0.0.0:8000 --log-level info --access-logfile /var/log/gunicorn.log
     environment:
+      SECRET_KEY: ${SECRET_KEY}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       GUNICORN_NB_WORKERS: ${GUNICORN_NB_WORKERS}
@@ -38,8 +39,9 @@ services:
       context: ../src
       dockerfile: Dockerfile
       target: production
-    command: celery -A api.app.celery_app worker --loglevel=info --logfile=/var/log/celery.log
+    command: celery -A api.app.celery_app worker --loglevel=info --logfile=/var/log/celery.log --concurrency=1
     environment:
+      SECRET_KEY: ${SECRET_KEY}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     networks:

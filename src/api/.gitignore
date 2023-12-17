@@ -1,1 +1,7 @@
-models/**
+# Exclude files inside model/ and files/ directories
+models/**/*
+files/**/*
+
+# Include git files
+!.gitignore
+!.gitkeep

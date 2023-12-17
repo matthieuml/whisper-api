@@ -22,6 +22,7 @@ services:
       target: development
     command: flask --app api.app run --host 0.0.0.0 --port 8000 --debug
     environment:
+      SECRET_KEY: ${SECRET_KEY}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
@@ -39,8 +40,9 @@ services:
       context: ../src
       dockerfile: Dockerfile
       target: development
-    command: celery -A api.app.celery_app worker --loglevel=debug
+    command: celery -A api.app.celery_app worker --loglevel=debug --concurrency=1
     environment:
+      SECRET_KEY: ${SECRET_KEY}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
