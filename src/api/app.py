@@ -3,6 +3,7 @@ import os
 
 from celery.result import AsyncResult
 from flask import Flask, flash, redirect, request
+import time
 from werkzeug.utils import secure_filename
 
 from api.worker.initialization import celery_init_app
@@ -60,8 +61,11 @@ def load_and_transcribe() -> dict[str, object]:
             return redirect(request.url)
         if file and allowed_extensions(file.filename, ALLOWED_EXTENSIONS):
             # Ensure the filename is safe (no directory traversal)
+            # and add timestamp to handle multiple save with same name
             filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            timestamp = str(int(time.time()))
+            filename_with_timestamp = f"{timestamp}-{filename}"
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename_with_timestamp)
             file.save(file_path)
             result = transcribe_audio.delay(full_audio=file_path)
             return redirect("/result/" + result.id)
