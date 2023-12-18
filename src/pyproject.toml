@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "aie-whisper-api"
+name = "whisper-api"
 version = "0.0"
 description = ""
-authors = ["Matthieu Mérigot-Lombard", "Zakaria Hammal"]
+authors = ["Matthieu Mérigot-Lombard"]
 
 [tool.poetry.dependencies]
 python = "3.11.6"

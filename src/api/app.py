@@ -38,10 +38,10 @@ celery_app = celery_init_app(app)
 def root():
     return """
     <!doctype html>
-    <title>API AIE</title>
-    <h1>API AIE</h1>
+    <title>WHISPER API</title>
+    <h1>Whisper API</h1>
     <form action="/transcribe" method="get">
-        <button type="submit">Go to Transcribe</button>
+        <button type="submit">Go to Transcription</button>
     </form>
     """
 
