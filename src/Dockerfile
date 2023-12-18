@@ -28,9 +28,7 @@ RUN poetry install --no-dev --no-root --no-cache
 # ====================== RUNTIME ENVIRONMENT ======================
 FROM python:3.11.6-slim-bookworm as runtime-base
 ENV PYSETUP_PATH="/opt/pysetup" \
-    PATH="/opt/pysetup/.venv/bin:$PATH" \
-    # Python
-    PYTHONUNBUFFERED=1
+    PATH="/opt/pysetup/.venv/bin:$PATH"
 
 WORKDIR /src
 
@@ -45,6 +43,10 @@ RUN apt-get update \
 # ======================== DEV ENVIRONMENT ========================
 # `development` image is used during development / testing
 FROM runtime-base as development
+
+# Avoid creating __pycache__ directories
+# that copies into the host in development
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # ======================== PROD ENVIRONMENT ========================
 # `production` image is used in production

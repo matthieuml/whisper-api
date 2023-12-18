@@ -28,6 +28,8 @@ services:
       GUNICORN_NB_WORKERS: ${GUNICORN_NB_WORKERS}
     ports:
       - 8000:8000
+    volumes:
+      - ../src/api/files:/src/api/files
     networks:
       - cache_link
     depends_on:
@@ -44,6 +46,9 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - ../src/api/files:/src/api/files
+      - ../src/api/models:/src/api/models
     networks:
       - cache_link
     depends_on:
