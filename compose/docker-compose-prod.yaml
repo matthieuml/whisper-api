@@ -22,9 +22,9 @@ services:
       target: production
     command: gunicorn api.app:app --bind 0.0.0.0:8000 --log-level info --access-logfile /var/log/gunicorn.log
     environment:
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY-secret}
       REDIS_HOST: ${REDIS_HOST-redis}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD-password}
       GUNICORN_NB_WORKERS: ${GUNICORN_NB_WORKERS}
     ports:
       - 8000:8000
@@ -43,9 +43,9 @@ services:
       target: production
     command: celery -A api.app.celery_app worker --loglevel=info --logfile=/var/log/celery.log --concurrency=${WORKER_CONCURRENCY-1}
     environment:
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY-secret}
       REDIS_HOST: ${REDIS_HOST-redis}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD-password}
     volumes:
       - ../src/api/files:/src/api/files
       - ../src/api/models:/src/api/models

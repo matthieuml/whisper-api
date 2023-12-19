@@ -1,15 +1,14 @@
 import json
 import os
+import time
 
 from celery.result import AsyncResult
-from flask import Flask, flash, redirect, request
-import time
+from flask import Flask, flash, redirect, render_template, request
 from werkzeug.utils import secure_filename
 
+from api.utils import allowed_extensions
 from api.worker.initialization import celery_init_app
 from api.worker.tasks import transcribe_audio
-
-from .utils import allowed_extensions
 
 # =============== Initialize Flask and Celery ===============
 
@@ -36,14 +35,7 @@ celery_app = celery_init_app(app)
 
 @app.route("/")
 def root():
-    return """
-    <!doctype html>
-    <title>WHISPER API</title>
-    <h1>Whisper API</h1>
-    <form action="/transcribe" method="get">
-        <button type="submit">Go to Transcription</button>
-    </form>
-    """
+    return render_template("index.html")
 
 
 @app.route("/transcribe", methods=["GET", "POST"])
@@ -51,33 +43,27 @@ def load_and_transcribe() -> dict[str, object]:
     if request.method == "POST":
         # Check if the post request has a file
         if "file" not in request.files:
-            flash("No file part")
+            flash("No file part!")
             return redirect(request.url)
         file = request.files["file"]
         # If the user does not select a file, the browser submits an
         # empty file without a filename
         if file.filename == "":
-            flash("No selected file")
+            flash("No file selected!")
             return redirect(request.url)
-        if file and allowed_extensions(file.filename, ALLOWED_EXTENSIONS):
-            # Ensure the filename is safe (no directory traversal)
-            # and add timestamp to handle multiple save with same name
-            filename = secure_filename(file.filename)
-            timestamp = str(int(time.time()))
-            filename_with_timestamp = f"{timestamp}-{filename}"
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename_with_timestamp)
-            file.save(file_path)
-            result = transcribe_audio.delay(full_audio=file_path)
-            return redirect("/result/" + result.id)
-    return """
-    <!doctype html>
-    <title>Transcription</title>
-    <h1>Upload a File</h1>
-    <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
-    </form>
-    """
+        if not allowed_extensions(file.filename, ALLOWED_EXTENSIONS):
+            flash("File extension not allowed!")
+            return redirect(request.url)
+        # Ensure the filename is safe (no directory traversal)
+        # and add timestamp to handle multiple save with same name
+        filename = secure_filename(file.filename)
+        timestamp = str(int(time.time()))
+        filename_with_timestamp = f"{timestamp}-{filename}"
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename_with_timestamp)
+        file.save(file_path)
+        result = transcribe_audio.delay(full_audio=file_path)
+        return redirect("/result/" + result.id)
+    return render_template("transcribe.html")
 
 
 @app.route("/result/<id>", methods=["GET"])

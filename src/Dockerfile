@@ -48,6 +48,8 @@ FROM runtime-base as development
 # that copies into the host in development
 ENV PYTHONDONTWRITEBYTECODE=1
 
+RUN pip install --no-cache-dir pytest==7.4.3
+
 # ======================== PROD ENVIRONMENT ========================
 # `production` image is used in production
 FROM runtime-base as production
