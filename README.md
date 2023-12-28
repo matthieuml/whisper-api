@@ -55,7 +55,7 @@ You must have [Docker](https://docs.docker.com/engine/install/) installed on you
    The number of worker concurrency should be adjusted depending on the VRAM size of your GPU, and the memory requirement of your task. Otherwise, a task might fail due to a lack of memory.
 2. Build and run the Docker image
    ```sh
-   docker-compose -f compose/docker-compose-prod.yaml up
+   docker compose -f compose/docker-compose-prod.yaml up
    ```
 
 The API should be accessible at `localhost:8000` or `0.0.0.0:8000`.
@@ -66,7 +66,7 @@ The API should be accessible at `localhost:8000` or `0.0.0.0:8000`.
 
 If you want to make some changes to the API, you can use the development environment with the command:
 ```sh
-docker-compose -f compose/docker-compose.yaml up
+docker compose -f compose/docker-compose.yaml up
 ```
 
 The app will be recompiled on every change, and the server will be restarted.
@@ -75,7 +75,7 @@ The app will be recompiled on every change, and the server will be restarted.
 
 You can run the tests after starting the container with the command:
 ```sh
-docker-compose exec -T worker python -m pytest api/tests/test.py
+docker compose exec -T worker python -m pytest api/tests/test.py
 ```
 
 ### Linting
