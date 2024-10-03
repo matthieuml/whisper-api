@@ -1,5 +1,4 @@
-version: "3.7"
-
+---
 services:
   redis:
     image: redis:7.2.2-bookworm
@@ -8,7 +7,7 @@ services:
     volumes:
       - cache:/data
     networks:
-      - cache_link
+      - whisper_api_network
     healthcheck:
         test: echo 'auth ${REDIS_PASSWORD-password}\nping' | redis-cli | grep PONG
         interval: 5s
@@ -30,7 +29,7 @@ services:
     volumes:
       - ../src:/src
     networks:
-      - cache_link
+      - whisper_api_network
     depends_on:
       redis:
         condition: service_healthy
@@ -48,7 +47,7 @@ services:
     volumes:
       - ../src:/src
     networks:
-      - cache_link
+      - whisper_api_network
     depends_on:
       redis:
         condition: service_healthy
@@ -61,8 +60,7 @@ services:
               capabilities: [gpu]
 
 volumes:
-  cache:  # Redis data
+  cache:
 
 networks:
-  cache_link: # Redis network
-    driver: bridge
+  whisper_api_network:
