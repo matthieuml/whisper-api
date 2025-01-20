@@ -9,23 +9,23 @@ services:
     networks:
       - whisper_api_network
     healthcheck:
-        test: echo 'auth ${REDIS_PASSWORD-password}\nping' | redis-cli | grep PONG
-        interval: 5s
-        timeout: 3s
-        retries: 5
+      test: echo 'auth ${REDIS_PASSWORD-password}\nping' | redis-cli | grep PONG
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   api:
     build:
       context: ../src
       dockerfile: Dockerfile
       target: development
-    command: flask --app api.app run --host 0.0.0.0 --port 8000 --debug
+    command: flask --app api.app run --host 0.0.0.0 --port 8123 --debug
     environment:
       SECRET_KEY: ${SECRET_KEY-secret}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD-password}
     ports:
-      - 127.0.0.1:8000:8000
+      - 127.0.0.1:8123:8123
     volumes:
       - ../src:/src
     networks:
@@ -33,7 +33,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-  
+
   worker:
     build:
       context: ../src
@@ -58,6 +58,26 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+
+  flower:
+    build:
+      context: ../src
+      dockerfile: Dockerfile
+      target: development
+    command: celery --workdir /src -A api.app.celery_app flower --port=5555
+    environment:
+      SECRET_KEY: ${SECRET_KEY-secret}
+      REDIS_HOST: ${REDIS_HOST-redis}
+      REDIS_PASSWORD: ${REDIS_PASSWORD-password}
+    volumes:
+      - ../src:/src
+    ports:
+      - 127.0.0.1:5555:5555
+    networks:
+      - whisper_api_network
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   cache:

@@ -13,5 +13,7 @@ celery = "5.4.0"
 redis = "5.1.0"
 llvmlite = "0.43.0"
 numba = "0.60.0"
+flower = "2.0.1"
+requests = "^2.31.0"
 
 [tool.poetry.dev-dependencies]
