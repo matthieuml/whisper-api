@@ -1,12 +1,9 @@
 # Whisper API
 
-Small API for Whisper transcription with a queue system using Celery. It is meant to be used with API calls, but a simple web interface is also available.
+A lightweight API for Whisper transcription, featuring a queue system with Celery. Designed primarily for API calls, it also includes a simple web interface, and a Flower dashboard is provided for monitoring Celery tasks.
 
 ## Project Structure
 ```
-├── compose
-│   └── docker-compose.yaml
-|   └── docker-compose-prod.yaml
 ├── src
 │   ├── api
 │   │   ├── files
@@ -22,10 +19,14 @@ Small API for Whisper transcription with a queue system using Celery. It is mean
 │   │   ├── app.py
 │   │   └── utils.py
 │   ├── Dockerfile
+|   ├── entrypoint.sh
 │   ├── guniconf.py
 │   ├── poetry.lock
 │   └── pyproject.toml
 ├── .pre-commit-config.yaml
+├── docker-compose-prod.yaml
+├── docker-compose.yaml
+├── LICENSE
 └── README.md
 ```
 
@@ -33,61 +34,51 @@ Small API for Whisper transcription with a queue system using Celery. It is mean
 
 ### Prerequisites
 
-You must have [Docker](https://docs.docker.com/engine/install/) installed on your machine, and it is strongly recommended to have [NVIDIA Container Runtime](https://docs.docker.com/config/containers/resource_constraints/#gpu) to have GPU support.
+Ensure you have [Docker](https://docs.docker.com/engine/install/) installed. For GPU acceleration, it is highly recommended to install the [NVIDIA Container Runtime](https://docs.docker.com/config/containers/resource_constraints/#gpu).
 
 ### Setup
 
-1. Clone the repo
+1. Clone the repository
    ```sh
    git clone git@github.com:matthieuml/whisper-api.git
    ```
-2. Create an environment file `.env` in the `compose/` directory
-   ```sh
-   SECRET_KEY=secret
-   REDIS_HOST=redis
-   REDIS_PASSWORD=password
-   GUNICORN_NB_WORKERS=4
-   WORKER_CONCURRENCY=2
-   ```
+2. Create an environment file
    
-   They are technically some default values, but you should change some of them for security reasons.
+   A template `.env-example` is provided. Copy it to `.env` in the root directory and update the values as needed.
 
-   The number of worker concurrency should be adjusted depending on the VRAM size of your GPU, and the memory requirement of your task. Otherwise, a task might fail due to a lack of memory.
-2. Build and run the Docker image
+   For security reasons, it is recommended to modify these values.
+   
+   Adjust `WORKER_CONCURRENCY` based on your GPU’s VRAM and the memory requirements of your tasks to prevent failures due to insufficient memory.
+3. Build and start the Docker containers
    ```sh
-   docker compose -f compose/docker-compose-prod.yaml up
+   docker compose -f docker-compose-prod.yaml up
    ```
 
-The API should be accessible at `localhost:8000` or `0.0.0.0:8000`.
+Once running, the API will be available at `http://localhost:8000`, and the Celery dashboard (Flower) will be accessible at `http://localhost:5555`.
 
 ## Development
 
 ### Environment
 
-If you want to make some changes to the API, you can use the development environment with the command:
+To work with the development environment and apply changes to the API, use the following command:
 ```sh
-docker compose -f compose/docker-compose.yaml up
+docker compose -f docker-compose.yaml up
 ```
 
-The app will be recompiled on every change, and the server will be restarted.
+The app will automatically update on every change without requiring a server restart.
 
 ### Tests
 
-You can run the tests after starting the container with the command:
+To run the tests after starting the container, use this command:
 ```sh
-docker compose exec -T worker python -m pytest api/tests/test.py
+docker compose exec -T <api-container> python -m pytest api/tests/test.py
 ```
 
 ### Linting
 
-This project uses [pre-commit](https://pre-commit.com/) to lint the code. You can install it with the command:
-```sh
-pip install pre-commit
-```
-
-Then, you can install the hooks with the command:
+This project uses [pre-commit](https://pre-commit.com/) to automatically lint the code. To set up the hooks, run:
 ```sh
 pre-commit install
 ```
 
-The hooks will be then run on every commit.
+The hooks will be executed automatically on every commit to ensure code quality.

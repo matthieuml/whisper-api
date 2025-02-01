@@ -1,3 +1,3 @@
 # Exclude model/ and files/ directories they will be mapped to avoid copying
-api/models/
-api/files/
+whisper-api/models/
+whisper-api/files/

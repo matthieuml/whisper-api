@@ -7,36 +7,36 @@ services:
     volumes:
       - cache:/data
     networks:
-      - whisper_api_network
+      - whisper-api-network
     healthcheck:
       test: echo 'auth ${REDIS_PASSWORD-password}\nping' | redis-cli | grep PONG
-      interval: 5s
+      interval: 15s
       timeout: 3s
-      retries: 5
+      retries: 3
 
   api:
     build:
-      context: ../src
+      context: ./src
       dockerfile: Dockerfile
       target: development
-    command: flask --app api.app run --host 0.0.0.0 --port 8123 --debug
+    command: flask --app api.app run --host 0.0.0.0 --port 8000 --debug
     environment:
       SECRET_KEY: ${SECRET_KEY-secret}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD-password}
     ports:
-      - 127.0.0.1:8123:8123
+      - 127.0.0.1:8000:8000
     volumes:
-      - ../src:/src
+      - ./src:/src
     networks:
-      - whisper_api_network
+      - whisper-api-network
     depends_on:
       redis:
         condition: service_healthy
 
   worker:
     build:
-      context: ../src
+      context: ./src
       dockerfile: Dockerfile
       target: development
     command: celery -A api.app.celery_app worker --loglevel=debug --concurrency=${WORKER_CONCURRENCY-1}
@@ -45,9 +45,9 @@ services:
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD-password}
     volumes:
-      - ../src:/src
+      - ./src:/src
     networks:
-      - whisper_api_network
+      - whisper-api-network
     depends_on:
       redis:
         condition: service_healthy
@@ -60,21 +60,13 @@ services:
               capabilities: [gpu]
 
   flower:
-    build:
-      context: ../src
-      dockerfile: Dockerfile
-      target: development
-    command: celery --workdir /src -A api.app.celery_app flower --port=5555
-    environment:
-      SECRET_KEY: ${SECRET_KEY-secret}
-      REDIS_HOST: ${REDIS_HOST-redis}
-      REDIS_PASSWORD: ${REDIS_PASSWORD-password}
-    volumes:
-      - ../src:/src
+    image: mher/flower:2.0.1
+    user: 10003:10003
+    command: celery --broker=redis://:${REDIS_PASSWORD-password}@${REDIS_HOST-redis}:6379/0 flower
     ports:
       - 127.0.0.1:5555:5555
     networks:
-      - whisper_api_network
+      - whisper-api-network
     depends_on:
       redis:
         condition: service_healthy
@@ -83,4 +75,4 @@ volumes:
   cache:
 
 networks:
-  whisper_api_network:
+  whisper-api-network:
