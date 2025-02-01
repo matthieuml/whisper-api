@@ -1,6 +1,6 @@
 import os
 import time
-from io import StringIO
+from io import BytesIO
 
 from celery.result import AsyncResult
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
@@ -75,15 +75,51 @@ def transcribe() -> dict[str, object]:
         # Get other form parameters
         model = request.form.get("model", "small")
         language = request.form.get("language", None)
-        response_format = request.form.get("response_format", "json")
         temperature = (
             float(request.form.get("temperature"))
             if "temperature" in request.form
             else None
         )
-        timestamp_granularities = request.form.getlist("timestamp_granularities") or [
-            "segment"
-        ]
+
+        response_format = request.form.get("response_format", "json")
+        # Validate response_format
+        if response_format not in ["text", "json", "verbose_json", "srt", "vtt"]:
+            return (
+                jsonify(
+                    {
+                        "error": f"Invalid response_format '{response_format}'. Should be one of {['text', 'json', 'verbose_json', 'srt', 'vtt']}."
+                    }
+                ),
+                400,
+            )
+
+        timestamp_granularities = list(
+            set(request.form.getlist("timestamp_granularities"))
+        )
+        # From OpenAI documentation: "response_format must be set verbose_json to use timestamp granularities"
+        if response_format != "verbose_json" and timestamp_granularities != []:
+            return (
+                jsonify(
+                    {
+                        "error": "timestamp_granularities is only valid for response_format 'verbose_json'."
+                    }
+                ),
+                400,
+            )
+        # Validate timestamp_granularities
+        if timestamp_granularities and not all(
+            granularity in ["segment", "word"]
+            for granularity in timestamp_granularities
+        ):
+            return (
+                jsonify(
+                    {
+                        "error": f"Invalid timestamp_granularities '{timestamp_granularities}'. Should be either 'segment', 'word', or both."
+                    }
+                ),
+                400,
+            )
+
         callback_url = request.form.get("callback_url")
 
         # Start transcription task
@@ -111,7 +147,7 @@ def transcribe() -> dict[str, object]:
 
         # Handle different response formats
         if response_format in ["text", "srt", "vtt"]:
-            output = StringIO(task_result["text"])
+            output = BytesIO(task_result["text"].encode("utf-8"))
             return send_file(
                 output,
                 mimetype=task_result["content_type"],
