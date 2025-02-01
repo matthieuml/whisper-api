@@ -11,6 +11,15 @@ from api.utils import allowed_extensions, download_file
 from api.worker.initialization import celery_init_app
 from api.worker.tasks import transcribe_audio
 
+# ====================== Logging ======================
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+
 # =============== Initialize Flask and Celery ===============
 
 app = Flask(__name__)
@@ -28,17 +37,17 @@ app.config.from_mapping(
 app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 app.config["UPLOAD_FOLDER"] = "/src/api/files/"
 ALLOWED_EXTENSIONS = {"mp4", "mp3", "wav", "flac"}
+logging.info(f"ALLOWED_EXTENSIONS: {ALLOWED_EXTENSIONS}")
+
+ALLOWED_DOMAINS = set()
+allowed_domains_env = os.environ["ALLOWED_DOMAINS"]
+if allowed_domains_env == "":
+    ALLOWED_DOMAINS.add("*")
+else:
+    ALLOWED_DOMAINS.update(allowed_domains_env.split(","))
+logging.info(f"ALLOWED_DOMAINS: {ALLOWED_DOMAINS}")
 
 celery_app = celery_init_app(app)
-
-# ====================== Logging ======================
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()],
-)
 
 # ====================== Define the API ======================
 
@@ -78,7 +87,7 @@ def transcribe() -> dict[str, object]:
                 return jsonify({"error": "No URL provided"}), 400
 
             # Download file from URL
-            file_path = download_file(url, app.config["UPLOAD_FOLDER"])
+            file_path = download_file(url, app.config["UPLOAD_FOLDER"], ALLOWED_DOMAINS)
         else:
             return jsonify({"error": "No file or URL provided"}), 400
 

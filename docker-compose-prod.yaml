@@ -25,6 +25,7 @@ services:
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD-password}
       GUNICORN_NB_WORKERS: ${GUNICORN_NB_WORKERS-}
+      ALLOWED_DOMAINS: ${ALLOWED_DOMAINS-*}
     ports:
       - 127.0.0.1:8000:8000
     volumes:
@@ -47,6 +48,7 @@ services:
       SECRET_KEY: ${SECRET_KEY-secret}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD-password}
+      ALLOWED_DOMAINS: ${ALLOWED_DOMAINS-*}
     volumes:
       - ./src/api/files:/src/api/files
       - ./src/api/models:/src/api/models

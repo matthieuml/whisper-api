@@ -7,13 +7,28 @@ import requests
 from werkzeug.utils import secure_filename
 
 
-def allowed_extensions(filename, allowed_extensions):
+def allowed_extensions(filename: str, allowed_extensions: set) -> bool:
+    """Check if the file has an allowed extension"""
+    if not isinstance(allowed_extensions, set):
+        raise ValueError("Invalid allowed_extensions")
     return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed_extensions
 
 
-def download_file(url: str, upload_folder: str) -> str:
+def download_file(url: str, upload_folder: str, allowed_domains=set()) -> str:
     """Download file from URL and save it to upload folder"""
     try:
+        # Validate URL
+        parsed_url = urlparse(url)
+        if not parsed_url.scheme or not parsed_url.netloc:
+            raise ValueError("Invalid URL")
+
+        # Validate allowed domains
+        if not isinstance(allowed_domains, set):
+            raise ValueError("Invalid allowed_domains")
+        if "*" not in allowed_domains and parsed_url.netloc not in allowed_domains:
+            raise ValueError("Domain not allowed")
+
+        # Download file
         response = requests.get(url, stream=True)
         response.raise_for_status()
 
