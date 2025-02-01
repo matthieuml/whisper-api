@@ -1,16 +1,12 @@
-import json
 import os
 import time
-import requests
-from urllib.parse import urlparse
-import mimetypes
-
-from celery.result import AsyncResult
-from flask import Flask, flash, redirect, render_template, request, jsonify, send_file, url_for
-from werkzeug.utils import secure_filename
 from io import StringIO
 
-from api.utils import allowed_extensions
+from celery.result import AsyncResult
+from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
+from werkzeug.utils import secure_filename
+
+from api.utils import allowed_extensions, download_file
 from api.worker.initialization import celery_init_app
 from api.worker.tasks import transcribe_audio
 
@@ -42,39 +38,6 @@ def root():
     return render_template("index.html")
 
 
-def download_file(url: str, upload_folder: str) -> str:
-    """Download file from URL and save it to upload folder"""
-    try:
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-
-        # Try to get filename from URL or Content-Disposition header
-        content_disposition = response.headers.get('content-disposition')
-        if content_disposition and 'filename=' in content_disposition:
-            filename = content_disposition.split('filename=')[1].strip('"\'')
-        else:
-            filename = os.path.basename(urlparse(url).path)
-            if not filename:
-                # If no filename in URL, try to guess extension from content-type
-                content_type = response.headers.get('content-type', '')
-                ext = mimetypes.guess_extension(content_type) or '.audio'
-                filename = f"audio{ext}"
-
-        # Add timestamp and secure the filename
-        timestamp = str(int(time.time()))
-        filename_with_timestamp = f"{timestamp}-{secure_filename(filename)}"
-        file_path = os.path.join(upload_folder, filename_with_timestamp)
-
-        # Save the file
-        with open(file_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-        return file_path
-    except Exception as e:
-        raise ValueError(f"Failed to download file from URL: {str(e)}")
-
-
 @app.route("/v1/audio/transcriptions", methods=["POST"])
 def transcribe() -> dict[str, object]:
     """OpenAI-compatible endpoint with advanced features"""
@@ -94,7 +57,9 @@ def transcribe() -> dict[str, object]:
             filename = secure_filename(file.filename)
             timestamp = str(int(time.time()))
             filename_with_timestamp = f"{timestamp}-{filename}"
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename_with_timestamp)
+            file_path = os.path.join(
+                app.config["UPLOAD_FOLDER"], filename_with_timestamp
+            )
             file.save(file_path)
 
         elif "file" in request.form:
@@ -111,8 +76,14 @@ def transcribe() -> dict[str, object]:
         model = request.form.get("model", "small")
         language = request.form.get("language", None)
         response_format = request.form.get("response_format", "json")
-        temperature = float(request.form.get("temperature")) if "temperature" in request.form else None
-        timestamp_granularities = request.form.getlist("timestamp_granularities") or ["segment"]
+        temperature = (
+            float(request.form.get("temperature"))
+            if "temperature" in request.form
+            else None
+        )
+        timestamp_granularities = request.form.getlist("timestamp_granularities") or [
+            "segment"
+        ]
         callback_url = request.form.get("callback_url")
 
         # Start transcription task
@@ -123,15 +94,17 @@ def transcribe() -> dict[str, object]:
             response_format=response_format,
             temperature=temperature,
             timestamp_granularities=timestamp_granularities,
-            callback_url=callback_url
+            callback_url=callback_url,
         )
 
         # If callback_url is provided, return immediately
         if callback_url:
-            return jsonify({
-                "status": "processing",
-                "message": "Transcription will be sent to callback URL when complete"
-            })
+            return jsonify(
+                {
+                    "status": "processing",
+                    "message": "Transcription will be sent to callback URL when complete",
+                }
+            )
 
         # Otherwise, wait for result as before
         task_result = result.get()
@@ -143,7 +116,7 @@ def transcribe() -> dict[str, object]:
                 output,
                 mimetype=task_result["content_type"],
                 as_attachment=True,
-                download_name=task_result["filename"]
+                download_name=task_result["filename"],
             )
 
         return jsonify(task_result)
@@ -155,22 +128,21 @@ def transcribe() -> dict[str, object]:
         return jsonify({"error": str(e)}), 400
 
 
-@app.route("/transcribe", methods=["GET", "POST"])
-def load_and_transcribe() -> dict[str, object]:
+@app.route("/v0/audio/transcriptions", methods=["POST"])
+def front_transcribe() -> dict[str, object]:
     """Legacy endpoint that returns simple text transcription"""
-    if request.method == "POST":
+    file_path = None
+
+    try:
         if "file" not in request.files:
-            flash("No file part!")
-            return redirect(request.url)
+            return jsonify({"error": "No file part"}), 400
 
         file = request.files["file"]
         if file.filename == "":
-            flash("No file selected!")
-            return redirect(request.url)
+            return jsonify({"error": "No file selected"}), 400
 
         if not allowed_extensions(file.filename, ALLOWED_EXTENSIONS):
-            flash("File extension not allowed!")
-            return redirect(request.url)
+            return jsonify({"error": "File extension not allowed"}), 400
 
         # Save file with timestamp
         filename = secure_filename(file.filename)
@@ -181,22 +153,24 @@ def load_and_transcribe() -> dict[str, object]:
 
         # Use the transcribe_audio task with text format for backward compatibility
         result = transcribe_audio.delay(
-            file_path=file_path,
-            model="small",
-            response_format="text"
+            file_path=file_path, model="small", response_format="text"
         )
         return redirect(url_for("task_result", id=result.id))
 
-    return render_template("index.html")
+    except Exception as e:
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+        return jsonify({"error": str(e)}), 400
 
 
-@app.route("/result/<id>", methods=["GET"])
+@app.route("/v1/audio/transcriptions/result/<id>", methods=["GET"])
 def task_result(id: str) -> dict[str, object]:
     """Legacy endpoint for getting task results"""
     result = AsyncResult(id)
-    response_data = {
-        "ready": result.ready(),
-        "successful": result.successful(),
-        "value": result.result["text"] if result.ready() and isinstance(result.result, dict) else result.result,
-    }
-    return json.dumps(response_data, ensure_ascii=False)
+    if result.ready():
+        if result.successful():
+            return jsonify({"status": "completed", "result": result.result["text"]})
+        else:
+            return jsonify({"status": "failed", "error": str(result.result)}), 500
+    else:
+        return jsonify({"status": "processing"}), 202
