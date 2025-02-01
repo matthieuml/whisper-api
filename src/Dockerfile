@@ -17,7 +17,9 @@ RUN pip install --no-cache-dir poetry==1.8.3
 
 WORKDIR $PYSETUP_PATH
 
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
+# Remove poetry.lock if it exists and generate a new one
+RUN rm -f poetry.lock && poetry lock
 
 # Pipefail to ensure build files if something goes wrong
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
