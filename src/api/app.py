@@ -5,6 +5,7 @@ import time
 from celery.result import AsyncResult
 from flask import Flask, flash, redirect, render_template, request
 from werkzeug.utils import secure_filename
+from urllib.parse import urlparse
 
 from api.utils import allowed_extensions
 from api.worker.initialization import celery_init_app
@@ -53,7 +54,10 @@ def load_and_transcribe() -> dict[str, object]:
             return redirect(request.url)
         if not allowed_extensions(file.filename, ALLOWED_EXTENSIONS):
             flash("File extension not allowed!")
-            return redirect(request.url)
+            target_url = request.url.replace('\\', '')
+            if not urlparse(target_url).netloc and not urlparse(target_url).scheme:
+                return redirect(target_url)
+            return redirect('/')
         # Ensure the filename is safe (no directory traversal)
         # and add timestamp to handle multiple save with same name
         filename = secure_filename(file.filename)
