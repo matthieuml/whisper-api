@@ -1,6 +1,7 @@
 import os
 import time
 from io import BytesIO
+import logging
 
 from celery.result import AsyncResult
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
@@ -29,6 +30,15 @@ app.config["UPLOAD_FOLDER"] = "/src/api/files/"
 ALLOWED_EXTENSIONS = {"mp4", "mp3", "wav", "flac"}
 
 celery_app = celery_init_app(app)
+
+# ====================== Logging ======================
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()],
+)
 
 # ====================== Define the API ======================
 
@@ -161,7 +171,8 @@ def transcribe() -> dict[str, object]:
         # Clean up downloaded file if there was an error
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
-        return jsonify({"error": str(e)}), 400
+        logging.error("An error occured: %s", str(e))
+        return jsonify({"error": "An internal error has occured"}), 400
 
 
 @app.route("/v0/audio/transcriptions", methods=["POST"])
@@ -196,7 +207,8 @@ def front_transcribe() -> dict[str, object]:
     except Exception as e:
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
-        return jsonify({"error": str(e)}), 400
+        logging.error("An error occured: %s", str(e))
+        return jsonify({"error": "An internal error has occured"}), 400
 
 
 @app.route("/v1/audio/transcriptions/result/<id>", methods=["GET"])
