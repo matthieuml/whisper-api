@@ -1,6 +1,30 @@
-<!doctype html>
-<title>WHISPER API</title>
-<h1>Whisper API</h1>
-<form action="/transcribe" method="get">
-    <button type="submit">Go to Transcription</button>
-</form>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Whisper API</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Whisper API</h1>
+      <form
+        method="post"
+        action="{{ url_for('front_transcribe') }}"
+        enctype="multipart/form-data"
+      >
+        <div class="form-group">
+          <label for="file">Select audio file:</label>
+          <input type="file" id="file" name="file" accept="audio/*" />
+        </div>
+        <button type="submit">Transcribe</button>
+      </form>
+      {% with messages = get_flashed_messages() %} {% if messages %} {% for
+      message in messages %}
+      <div class="alert">{{ message }}</div>
+      {% endfor %} {% endif %} {% endwith %}
+    </div>
+  </body>
+</html>

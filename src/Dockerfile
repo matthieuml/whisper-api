@@ -38,6 +38,10 @@ RUN apt-get update \
     ffmpeg=7:5.1.6-0+deb12u1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a shared group
+ARG GID=10000
+RUN groupadd --gid "${GID}" whisper-group
+
 # ======================== DEV ENVIRONMENT ========================
 # `development` image is used during development / testing
 FROM runtime-base AS development
@@ -48,27 +52,55 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 RUN pip install --no-cache-dir pytest==7.4.3
 
-# ======================== PROD ENVIRONMENT ========================
-# `production` image is used in production
-FROM runtime-base AS production
+# ======================== PROD API ENVIRONMENT ========================
+# `production` image is used in production for the API
+FROM runtime-base AS production-api
 
 # Create a user to run the app as non-root
-ARG UID=10001
+ARG API_UID=10001
 RUN adduser \
     --disabled-password \
     --gecos "" \
     --home "/nonexistent" \
     --shell "/sbin/nologin" \
     --no-create-home \
-    --uid "${UID}" \
-    whisper
+    --uid "${API_UID}" \
+    whisper-api && \
+    usermod -aG whisper-group whisper-api
 
 COPY . .
 
 # Give the right permission to the user
-RUN chown -R whisper:whisper /src \
-    && touch /var/log/celery.log /var/log/gunicorn.log \
-    && chown whisper:whisper /var/log/celery.log /var/log/gunicorn.log \
-    && rm pyproject.toml poetry.lock Dockerfile
+RUN chown -R whisper-api:whisper-api /src \
+    && touch /var/log/gunicorn.log \
+    && chown whisper-api:whisper-api /var/log/gunicorn.log \
+    && rm pyproject.toml poetry.lock Dockerfile entrypoint.sh
 
-USER whisper
+USER whisper-api
+
+# ======================== PROD WORKER ENVIRONMENT ========================
+# `production` image is used in production for the worker
+FROM runtime-base AS production-worker
+
+# Create a user to run the app as non-root
+ARG WORKER_UID=10002
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${WORKER_UID}" \
+    whisper-worker && \
+    usermod -aG whisper-group whisper-worker
+
+COPY . .
+
+# Give the right permission to the user
+RUN chown -R whisper-worker:whisper-worker /src \
+    && touch /var/log/celery.log \
+    && chown whisper-worker:whisper-worker /var/log/celery.log \
+    && rm pyproject.toml poetry.lock Dockerfile \
+    && chmod +x entrypoint.sh
+
+ENTRYPOINT [ "./entrypoint.sh" ]

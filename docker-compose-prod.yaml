@@ -7,52 +7,61 @@ services:
     volumes:
       - cache:/data
     networks:
-      - whisper_api_network
+      - whisper-api-network
     healthcheck:
         test: echo 'auth ${REDIS_PASSWORD-password}\nping' | redis-cli | grep PONG
-        interval: 5s
+        interval: 15s
         timeout: 3s
-        retries: 5
+        retries: 3
 
   api:
     build:
-      context: ../src
+      context: ./src
       dockerfile: Dockerfile
-      target: production
+      target: production-api
     command: gunicorn api.app:app --bind 0.0.0.0:8000 --log-level info --access-logfile /var/log/gunicorn.log
     environment:
       SECRET_KEY: ${SECRET_KEY-secret}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD-password}
-      GUNICORN_NB_WORKERS: ${GUNICORN_NB_WORKERS}
+      GUNICORN_NB_WORKERS: ${GUNICORN_NB_WORKERS-}
+      ALLOWED_DOMAINS: ${ALLOWED_DOMAINS-*}
     ports:
-      - 8000:8000
+      - 127.0.0.1:8000:8000
     volumes:
-      - ../src/api/files:/src/api/files
+      - ./src/api/files:/src/api/files
     networks:
-      - whisper_api_network
+      - whisper-api-network
     depends_on:
       redis:
+        condition: service_healthy
+      worker:
         condition: service_healthy
   
   worker:
     build:
-      context: ../src
+      context: ./src
       dockerfile: Dockerfile
-      target: production
+      target: production-worker
     command: celery -A api.app.celery_app worker --loglevel=info --logfile=/var/log/celery.log --concurrency=${WORKER_CONCURRENCY-1}
     environment:
       SECRET_KEY: ${SECRET_KEY-secret}
       REDIS_HOST: ${REDIS_HOST-redis}
       REDIS_PASSWORD: ${REDIS_PASSWORD-password}
+      ALLOWED_DOMAINS: ${ALLOWED_DOMAINS-*}
     volumes:
-      - ../src/api/files:/src/api/files
-      - ../src/api/models:/src/api/models
+      - ./src/api/files:/src/api/files
+      - ./src/api/models:/src/api/models
     networks:
-      - whisper_api_network
+      - whisper-api-network
     depends_on:
       redis:
         condition: service_healthy
+    healthcheck:
+      test: celery -A api.app.celery_app inspect ping
+      interval: 15s
+      timeout: 5s
+      retries: 3
     deploy:
       resources:
         reservations:
@@ -60,9 +69,23 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+  
+  flower:
+    image: mher/flower:2.0.1
+    user: 10003:10003
+    command: celery --broker=redis://:${REDIS_PASSWORD-password}@${REDIS_HOST-redis}:6379/0 flower
+    ports:
+      - 127.0.0.1:5555:5555
+    networks:
+      - whisper-api-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
 
 volumes:
   cache:
 
 networks:
-  whisper_api_network:
+  whisper-api-network:
